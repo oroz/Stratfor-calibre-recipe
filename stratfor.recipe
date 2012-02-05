@@ -1,0 +1,175 @@
+#!/usr/bin/env  python
+__license__   = 'GPL v3'
+__copyright__ = '2011, unnamedrambler@gmail.com; 2012, orozuz@gmail.com'
+__docformat__ = 'restructuredtext en'
+
+from calibre.web.feeds.news import BasicNewsRecipe
+import copy, re, time
+from datetime import datetime, timedelta
+from calibre.web.feeds.templates import Template, CLASS
+from lxml.html.builder import HTML, HEAD, TITLE, STYLE, DIV, BODY, BR, A, HR, UL
+
+class MyNavBarTemplate(Template):
+    """
+        Articles header and bottom - todo remove navigation for sections as well
+        """
+    
+    def _generate(self, bottom, feed, art, number_of_articles_in_feed,
+                  two_levels, url, __appname__, prefix='', center=True,
+                  extra_css=None, style=None):
+        head = HEAD(TITLE('navbar'))
+        if style:
+            head.append(STYLE(style, type='text/css'))
+        if extra_css:
+            head.append(STYLE(extra_css, type='text/css'))
+        
+        if prefix and not prefix.endswith('/'):
+            prefix += '/'
+        align = 'center' if center else 'left'
+        
+        navbar = DIV(CLASS('calibre_navbar', 'calibre_rescale_70',
+                           style='text-align:'+align))
+        
+        self.root = HTML(head, BODY(navbar))
+
+class Stratfor(BasicNewsRecipe):
+
+    title                  = 'Stratfor'
+    __author__             = ''
+    description            = 'Global Intelligence'
+    needs_subscription     = False
+    #max_articles_per_feed  = 100
+    no_stylesheets         = True
+    encoding               = 'utf8'
+    publisher              = 'Stratfor'
+    category               = 'news, intelligence, world'
+    language               = 'en'
+    publication_type       = 'newspaper'
+    oldest_article         = 1
+    delay                  = 1
+    reverse_article_order   = True
+    format                 = '%b %d, %Y | %H%M %Z'
+    time_limit             = 24*60*60
+
+    #timefmt  = '%B %d, %Y %H%M %Z'
+
+    extra_css      = '''h1{color:#093D72 ; font-family:Georgia,"Century Schoolbook","Times New Roman",Times,serif; }
+                    h2, .section-title {color:#474537; font-family:Georgia,"Century Schoolbook","Times New Roman",Times,serif; font-style:italic;}
+                    .submitted{color:gray; font-family:Georgia,"Century Schoolbook","Times New Roman",Times,serif; font-size:small; font-style:italic;}
+                    .insettipUnit {color:#666666; font-family:Arial,Sans-serif;font-size:xx-small }
+                    .media-caption, .media-copyright{ font-size:x-small; color:#333333; font-family:Arial,Helvetica,sans-serif}
+                    .article{font-family :Arial,Helvetica,sans-serif; font-size:x-small}
+                    .tagline {color:#333333; font-size:xx-small}
+                    .dateStamp {color:#666666; font-family:Arial,Helvetica,sans-serif}
+                        h3{font-family:Arial,Helvetica,sans-serif;}
+                        .byline{color:blue;font-family:Arial,Helvetica,sans-serif; font-size:xx-small}
+                        h6{color:#333333; font-family:Georgia,"Century Schoolbook","Times New Roman",Times,serif; font-style:italic; }'''
+
+    remove_tags_before = dict(id='content-inner')
+    remove_tags = [
+                    dict(id=["text-resize-bar", ]),
+                    {'class':["facebook_like", "stratfor_feedback", "toplink-wrapper", "share_this_container", "relatedlinks" ]},
+                    dict(rel='shortcut icon'),
+                    dict(id=["site-header","main-menu", "skip-link"]),
+                    dict(attrs={'class':['unlocked', 'main_current_date', 'social_print', 'text_resize', 'article_divider', 'node_header_name']})
+                    ]
+    remove_tags_after = [{'class':"content"},]
+    
+    def __init__(self, options, log, progress_reporter):
+        """ Constructor. """
+        BasicNewsRecipe.__init__(self, options, log, progress_reporter)
+        self.navbar = MyNavBarTemplate()
+
+        #def get_browser(self):
+        #br = BasicNewsRecipe.get_browser()
+        #if self.username is not None and self.password is not None:
+        #   br.open('http://www.stratfor.com/user')
+        #    br.select_form(nr=0)
+        #    br['name']   = self.username
+        #    br['pass'] = self.password
+        #    res = br.submit()
+        #    raw = res.read()
+        #    if 'My Account' not in raw:
+        #        raise ValueError('Failed to log in to stratfor.com, check your '
+        #                'username and password')
+    #return br
+
+    def parse_articles(self, soup):
+        articles = []
+        for div in soup.findAll(True, attrs={'class':['teaser_wrapper']}):
+            a = div.find('a', href=True)
+                
+            if not a:
+                continue
+            url = re.sub(r'\?.*', '', a['href']).strip()
+            if url.startswith('/'): url = 'http://www.stratfor.com'+url
+            title = self.tag_to_string(a)
+
+            img = div.find('img')
+            if img:
+                img_url = img['src'].strip()
+                if img_url.startswith('/'): img_url = 'http://www.stratfor.com'+img_url
+
+            date_div = div.find('div', attrs={'class':['updated_teaser_date']})
+            if date_div:
+                pubdate = self.tag_to_string(date_div, use_alt=False).strip()
+            #print "pub date %s" %(pubdate)
+            desc_div = div.find('p')
+            #print "p %s" %(desc_div)
+            if desc_div:
+                description = self.tag_to_string(desc_div, use_alt=False).replace("[more]", "")
+            x = time.strptime(pubdate, self.format)
+            dt = datetime(*x[:6])
+            diff = datetime.now() - dt
+            total_seconds = diff.days*24*3600 + diff.seconds
+            if total_seconds <= self.time_limit:
+                d = dict( title=title, url=url, description=description, date=pubdate, content ='')
+                articles.append( d )
+        return articles
+
+    def parse_index(self):
+        feeds = { 'Geopolitical Weekly':{'http://www.stratfor.com/geopolitical-weekly'}, 'Security Weekly':{'http://www.stratfor.com/security-weekly'},
+            'Analysis':{'http://www.stratfor.com/analysis', 'http://www.stratfor.com/analysis?page=1'}, 
+            'Geopolitical Diary':{'http://www.stratfor.com/geopolitical-diary'},
+            'Graphic of the day': {'http://www.stratfor.com/graphic-of-the-day'}, 
+            'Situation reports':{'http://www.stratfor.com/situation-report/', 'http://www.stratfor.com/situation-report?page=1','http://www.stratfor.com/situation-report?page=2', 'http://www.stratfor.com/situation-report?page=3'}
+        }
+        weights = { 'Geopolitical Weekly':1, 'Security Weekly':2, 'Analysis':4, 'Geopolitical Diary':3, 'Graphic of the day':5, 'Situation reports':6}
+        articles = {}
+        categories = feeds.keys()
+        for key,urls in feeds.iteritems():
+            for url in urls:
+                #print "Downloading '%s' from %s" %(key, url)
+                soup = self.index_to_soup(url)
+                article = self.parse_articles(soup)
+                #print "\t%s" %(len(article))
+                if article:
+                    if not articles or key not in articles:
+                        articles[key] = article
+                    else:
+                        articles[key].extend(article)
+        for key in categories:
+            i = 0
+            if key in articles:
+                i = len(articles[key])
+            print "Got %s articles from %s " %(i, key)
+        categories = self.sort_index_by(categories, weights)
+        categories = [(key, articles[key]) for key in categories if articles.has_key(key)]
+        return categories
+
+    def postprocess_html(self, soup, first):
+        for tag in soup.findAll(name=['table', 'tr', 'td']):
+            tag.name = 'div'
+
+        for tag in soup.findAll('div', dict(id=["articleThumbnail_1", "articleThumbnail_2", "articleThumbnail_3", "articleThumbnail_4", "articleThumbnail_5", "articleThumbnail_6", "articleThumbnail_7"])):
+            tag.extract()
+
+        return soup
+
+    def get_masthead_url(self):
+        return "https://twimg0-a.akamaihd.net/profile_images/1124404117/fblogo4_reasonably_small.jpg"
+
+        #def cleanup(self):
+#self.browser.open('http://www.stratfor.com/logout')
+
+
