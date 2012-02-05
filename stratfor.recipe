@@ -129,10 +129,10 @@ class Stratfor(BasicNewsRecipe):
 
     def parse_index(self):
         feeds = { 'Geopolitical Weekly':{'http://www.stratfor.com/geopolitical-weekly'}, 'Security Weekly':{'http://www.stratfor.com/security-weekly'},
-            'Analysis':{'http://www.stratfor.com/analysis', 'http://www.stratfor.com/analysis?page=1'}, 
+            'Analysis':{'http://www.stratfor.com/analysis?page=1', 'http://www.stratfor.com/analysis'}, 
             'Geopolitical Diary':{'http://www.stratfor.com/geopolitical-diary'},
             'Graphic of the day': {'http://www.stratfor.com/graphic-of-the-day'}, 
-            'Situation reports':{'http://www.stratfor.com/situation-report/', 'http://www.stratfor.com/situation-report?page=1','http://www.stratfor.com/situation-report?page=2', 'http://www.stratfor.com/situation-report?page=3'}
+            'Situation reports':{'http://www.stratfor.com/situation-report?page=3', 'http://www.stratfor.com/situation-report?page=2','http://www.stratfor.com/situation-report?page=2', 'http://www.stratfor.com/situation-report/'}
         }
         weights = { 'Geopolitical Weekly':1, 'Security Weekly':2, 'Analysis':4, 'Geopolitical Diary':3, 'Graphic of the day':5, 'Situation reports':6}
         articles = {}
