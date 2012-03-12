@@ -4,7 +4,7 @@ __copyright__ = '2011, unnamedrambler@gmail.com; 2012, orozuz@gmail.com'
 __docformat__ = 'restructuredtext en'
 
 from calibre.web.feeds.news import BasicNewsRecipe
-import copy, re, time
+import copy, re, time, mechanize, Cookie
 from datetime import datetime, timedelta
 from calibre.web.feeds.templates import Template, CLASS
 from lxml.html.builder import HTML, HEAD, TITLE, STYLE, DIV, BODY, BR, A, HR, UL
@@ -74,14 +74,23 @@ class Stratfor(BasicNewsRecipe):
                     dict(attrs={'class':['unlocked', 'main_current_date', 'social_print', 'text_resize', 'article_divider', 'node_header_name']})
                     ]
     remove_tags_after = [{'class':"content"},]
-    
+
     def __init__(self, options, log, progress_reporter):
         """ Constructor. """
         BasicNewsRecipe.__init__(self, options, log, progress_reporter)
         self.navbar = MyNavBarTemplate()
 
-        #def get_browser(self):
-        #br = BasicNewsRecipe.get_browser()
+    def get_browser(self):
+        br = BasicNewsRecipe.get_browser()
+        response = br.open('http://www.stratfor.com/')
+	cookies = mechanize.CookieJar()
+	print "<"
+	cookies.set_cookie(mechanize.Cookie(None, 'YPF8827340282Jdskjhfiw_928937459182JAX666', '2.124.237.150', None, False, '.stratfor.com', True, True, '/', True, False, None, True, '', '', None))
+	cookies.set_cookie(mechanize.Cookie(None, 'no_freelistpopup', '1', None, False, '.stratfor.com', True, True, '/', True, False, None, True, '', '', None))
+	br = mechanize.build_opener(mechanize.HTTPCookieProcessor(cookies))
+        response = br.open('http://www.stratfor.com/')
+	print ">"
+	print response
         #if self.username is not None and self.password is not None:
         #   br.open('http://www.stratfor.com/user')
         #    br.select_form(nr=0)
@@ -92,7 +101,7 @@ class Stratfor(BasicNewsRecipe):
         #    if 'My Account' not in raw:
         #        raise ValueError('Failed to log in to stratfor.com, check your '
         #                'username and password')
-    #return br
+    	return br
 
     def parse_articles(self, soup):
         articles = []
@@ -139,8 +148,9 @@ class Stratfor(BasicNewsRecipe):
         categories = feeds.keys()
         for key,urls in feeds.iteritems():
             for url in urls:
-                #print "Downloading '%s' from %s" %(key, url)
+                print "Downloading '%s' from %s" %(key, url)
                 soup = self.index_to_soup(url)
+		print "soup %s" %(soup)
                 article = self.parse_articles(soup)
                 #print "\t%s" %(len(article))
                 if article:
