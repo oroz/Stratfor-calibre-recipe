@@ -68,13 +68,13 @@ class Stratfor(BasicNewsRecipe):
     remove_tags_before = dict(id='content-inner')
     remove_tags = [
                     dict(id=["text-resize-bar", ]),
-                    {'class':["facebook_like", "stratfor_feedback", "toplink-wrapper", "share_this_container", "relatedlinks" ]},
+                    {'class':["facebook_like", "stratfor_feedback", "toplink-wrapper", "share_this_container", "relatedlinks", "print_btn", "freereports_side" ]},
                     dict(rel='shortcut icon'),
                     dict(id=["site-header","main-menu", "skip-link"]),
                     dict(attrs={'class':['unlocked', 'main_current_date', 'social_print', 'text_resize', 'article_divider', 'node_header_name']})
                     ]
-    remove_tags_after = [{'class':"content"},]
-
+    #remove_tags_after = [{'class':"content"},]
+    remove_tags_after = [{'class':"main_right_inner"},]
     def __init__(self, options, log, progress_reporter):
         """ Constructor. """
         BasicNewsRecipe.__init__(self, options, log, progress_reporter)
@@ -84,13 +84,11 @@ class Stratfor(BasicNewsRecipe):
         br = BasicNewsRecipe.get_browser()
         response = br.open('http://www.stratfor.com/')
 	cookies = mechanize.CookieJar()
-	print "<"
 	cookies.set_cookie(mechanize.Cookie(None, 'YPF8827340282Jdskjhfiw_928937459182JAX666', '2.124.237.150', None, False, '.stratfor.com', True, True, '/', True, False, None, True, '', '', None))
 	cookies.set_cookie(mechanize.Cookie(None, 'no_freelistpopup', '1', None, False, '.stratfor.com', True, True, '/', True, False, None, True, '', '', None))
 	br = mechanize.build_opener(mechanize.HTTPCookieProcessor(cookies))
         response = br.open('http://www.stratfor.com/')
-	print ">"
-	print response
+        #print response
         #if self.username is not None and self.password is not None:
         #   br.open('http://www.stratfor.com/user')
         #    br.select_form(nr=0)
@@ -150,7 +148,7 @@ class Stratfor(BasicNewsRecipe):
             for url in urls:
                 print "Downloading '%s' from %s" %(key, url)
                 soup = self.index_to_soup(url)
-		print "soup %s" %(soup)
+                #print "soup %s" %(soup)
                 article = self.parse_articles(soup)
                 #print "\t%s" %(len(article))
                 if article:
