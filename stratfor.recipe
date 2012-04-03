@@ -5,6 +5,7 @@ __docformat__ = 'restructuredtext en'
 
 from calibre.web.feeds.news import BasicNewsRecipe
 import copy, re, time, mechanize, Cookie
+from BeautifulSoup import BeautifulSoup
 from datetime import datetime, timedelta
 from calibre.web.feeds.templates import Template, CLASS
 from lxml.html.builder import HTML, HEAD, TITLE, STYLE, DIV, BODY, BR, A, HR, UL
@@ -70,11 +71,11 @@ class Stratfor(BasicNewsRecipe):
                     dict(id=["text-resize-bar", ]),
                     {'class':["facebook_like", "stratfor_feedback", "toplink-wrapper", "share_this_container", "relatedlinks", "print_btn", "freereports_side" ]},
                     dict(rel='shortcut icon'),
-                    dict(id=["site-header","main-menu", "skip-link"]),
+                    dict(id=["site-header","main-menu", "skip-link", "top_picks", "site_menu", "mobile_menu"]),
                     dict(attrs={'class':['unlocked', 'main_current_date', 'social_print', 'text_resize', 'article_divider', 'node_header_name']})
                     ]
     #remove_tags_after = [{'class':"content"},]
-    remove_tags_after = [{'class':"main_right_inner"},]
+    remove_tags_after = dict(id=["top_picks",])
     def __init__(self, options, log, progress_reporter):
         """ Constructor. """
         BasicNewsRecipe.__init__(self, options, log, progress_reporter)
@@ -83,22 +84,33 @@ class Stratfor(BasicNewsRecipe):
     def get_browser(self):
         br = BasicNewsRecipe.get_browser()
         response = br.open('http://www.stratfor.com/')
-	cookies = mechanize.CookieJar()
-	cookies.set_cookie(mechanize.Cookie(None, 'YPF8827340282Jdskjhfiw_928937459182JAX666', '2.124.237.150', None, False, '.stratfor.com', True, True, '/', True, False, None, True, '', '', None))
-	cookies.set_cookie(mechanize.Cookie(None, 'no_freelistpopup', '1', None, False, '.stratfor.com', True, True, '/', True, False, None, True, '', '', None))
-	br = mechanize.build_opener(mechanize.HTTPCookieProcessor(cookies))
-        response = br.open('http://www.stratfor.com/')
+        cookies = mechanize.CookieJar()
+        #cookies.set_cookie(mechanize.Cookie(None, 'YPF8827340282Jdskjhfiw_928937459182JAX666', '2.124.237.150', None, False, '.stratfor.com', True, True, '/', True, False, None, True, '', '', None))
+        cookies.set_cookie(mechanize.Cookie(None, 'no_freelistpopup', '1', None, False, '.stratfor.com', True, True, '/', True, False, None, True, '', '', None))
+        #br = mechanize.build_opener(mechanize.HTTPCookieProcessor(cookies))
+        #response = br.open('http://www.stratfor.com/')
         #print response
-        #if self.username is not None and self.password is not None:
-        #   br.open('http://www.stratfor.com/user')
-        #    br.select_form(nr=0)
-        #    br['name']   = self.username
-        #    br['pass'] = self.password
-        #    res = br.submit()
-        #    raw = res.read()
-        #    if 'My Account' not in raw:
-        #        raise ValueError('Failed to log in to stratfor.com, check your '
-        #                'username and password')
+        if self.username is not None and self.password is not None:
+            res = br.open('http://www.stratfor.com/user')
+            raw = res.read();
+            br.select_form(nr=0)
+            if 'Math question' in raw:
+                soup = BeautifulSoup(raw)
+                field = soup.find('span', attrs={'class':['field-prefix']})
+                elems = field.string.split(' ')
+                #print elems[0]
+                #print elems[2]
+                captchaValue = int(elems[0]) + int(elems[2])
+                #print captchaValue
+                br['captcha_response'] = str(captchaValue)
+            br['name']   = self.username
+            br['pass'] = self.password
+            res = br.submit()
+            raw = res.read()
+            
+            if 'My Account' not in raw:
+                raise ValueError('Failed to log in to stratfor.com, check your '
+                        'username and password')
     	return br
 
     def parse_articles(self, soup):
@@ -177,7 +189,7 @@ class Stratfor(BasicNewsRecipe):
     def get_masthead_url(self):
         return "https://twimg0-a.akamaihd.net/profile_images/1124404117/fblogo4_reasonably_small.jpg"
 
-        #def cleanup(self):
-#self.browser.open('http://www.stratfor.com/logout')
+    def cleanup(self):
+        self.browser.open('http://www.stratfor.com/user/logout')
 
 
