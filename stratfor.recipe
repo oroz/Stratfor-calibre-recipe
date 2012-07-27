@@ -50,7 +50,7 @@ class Stratfor(BasicNewsRecipe):
     delay                  = 1
     reverse_article_order   = True
     format                 = '%b %d, %Y | %H%M %Z'
-    time_limit             = 7*24*60*60
+    time_limit             = 1*24*60*60
 
     #timefmt  = '%B %d, %Y %H%M %Z'
 
@@ -153,7 +153,7 @@ class Stratfor(BasicNewsRecipe):
             'Geopolitical Diary':{'http://www.stratfor.com/geopolitical-diary'},
             'Other Voices':{'http://www.stratfor.com/other-voices'},
             'Graphic of the day': {'http://www.stratfor.com/graphic-of-the-day'}, 
-            'Situation reports':{'http://www.stratfor.com/situation-report?page=3', 'http://www.stratfor.com/situation-report?page=2','http://www.stratfor.com/situation-report?page=2', 'http://www.stratfor.com/situation-report/'}
+            'Situation reports':{'http://www.stratfor.com/situation-report?page=4', 'http://www.stratfor.com/situation-report?page=3', 'http://www.stratfor.com/situation-report?page=2','http://www.stratfor.com/situation-report?page=1', 'http://www.stratfor.com/situation-report/'}
         }
         weights = { 'Geopolitical Weekly':1, 'Security Weekly':2, 'Analysis':4, 'Geopolitical Diary':3, 'Other Voices':5, 'Graphic of the day':6, 'Situation reports':7}
         articles = {}
