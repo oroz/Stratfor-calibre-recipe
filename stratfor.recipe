@@ -66,16 +66,16 @@ class Stratfor(BasicNewsRecipe):
                         .byline{color:blue;font-family:Arial,Helvetica,sans-serif; font-size:xx-small}
                         h6{color:#333333; font-family:Georgia,"Century Schoolbook","Times New Roman",Times,serif; font-style:italic; }'''
 
-    remove_tags_before = dict(id='content-inner')
+    remove_tags_before = dict(id='main-area')
     remove_tags = [
                     dict(id=["text-resize-bar", ]),
-                    {'class':["facebook_like", "stratfor_feedback", "toplink-wrapper", "share_this_container", "relatedlinks", "print_btn", "freereports_side" ]},
+                    {'class':["facebook_like", "stratfor_feedback", "toplink-wrapper", "share_this_container", "relatedlinks", "print_btn", "freereports_side", "view-frontpage-views" ]},
                     dict(rel='shortcut icon'),
-                    dict(id=["site-header","main-menu", "skip-link", "top_picks", "site_menu", "mobile_menu"]),
+                    dict(id=["site-header","main-menu", "skip-link", "top_picks", "site_menu", "mobile_menu", "right-side-bar", "top-picks"]),
                     dict(attrs={'class':['unlocked', 'main_current_date', 'social_print', 'text_resize', 'article_divider', 'node_header_name']})
                     ]
     #remove_tags_after = [{'class':"content"},]
-    remove_tags_after = dict(id=["top_picks",])
+    remove_tags_after = dict(id=["main-area"])
     def __init__(self, options, log, progress_reporter):
         """ Constructor. """
         BasicNewsRecipe.__init__(self, options, log, progress_reporter)
@@ -153,9 +153,10 @@ class Stratfor(BasicNewsRecipe):
             'Geopolitical Diary':{'http://www.stratfor.com/geopolitical-diary'},
             'Other Voices':{'http://www.stratfor.com/other-voices'},
             'Graphic of the day': {'http://www.stratfor.com/graphic-of-the-day'}, 
+	    'Video' : {'http://www.stratfor.com/video'},
             'Situation reports':{'http://www.stratfor.com/situation-report?page=4', 'http://www.stratfor.com/situation-report?page=3', 'http://www.stratfor.com/situation-report?page=2','http://www.stratfor.com/situation-report?page=1', 'http://www.stratfor.com/situation-report/'}
         }
-        weights = { 'Geopolitical Weekly':1, 'Security Weekly':2, 'Analysis':4, 'Geopolitical Diary':3, 'Other Voices':5, 'Graphic of the day':6, 'Situation reports':7}
+        weights = { 'Geopolitical Weekly':1, 'Security Weekly':2, 'Analysis':4, 'Geopolitical Diary':3, 'Other Voices':5, 'Graphic of the day':6, 'Video':7, 'Situation reports':8}
         articles = {}
         categories = feeds.keys()
         for key,urls in feeds.iteritems():
