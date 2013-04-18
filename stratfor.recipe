@@ -66,7 +66,7 @@ class Stratfor(BasicNewsRecipe):
                         .byline{color:blue;font-family:Arial,Helvetica,sans-serif; font-size:xx-small}
                         h6{color:#333333; font-family:Georgia,"Century Schoolbook","Times New Roman",Times,serif; font-style:italic; }'''
 
-    remove_tags_before = dict(id='main-area')
+    remove_tags_before = dict(id=['main-area'])
     remove_tags = [
                     dict(id=["text-resize-bar", ]),
                     {'class':["facebook_like", "stratfor_feedback", "toplink-wrapper", "share_this_container", "relatedlinks", "print_btn", "freereports_side", "view-frontpage-views" ]},
@@ -82,7 +82,7 @@ class Stratfor(BasicNewsRecipe):
         self.navbar = MyNavBarTemplate()
 
     def get_browser(self):
-        br = BasicNewsRecipe.get_browser()
+        br = BasicNewsRecipe.get_browser(self)
         response = br.open('http://www.stratfor.com/')
         cookies = mechanize.CookieJar()
         #cookies.set_cookie(mechanize.Cookie(None, 'YPF8827340282Jdskjhfiw_928937459182JAX666', '2.124.237.150', None, False, '.stratfor.com', True, True, '/', True, False, None, True, '', '', None))
@@ -115,6 +115,10 @@ class Stratfor(BasicNewsRecipe):
 
     def parse_articles(self, soup):
         articles = []
+        #remove recent posts from blog
+        for recent in  soup.findAll(True, attrs={'id':['block-views-blog-recent-posts']}):
+            recent.extract()
+
         for div in soup.findAll(True, attrs={'class':['teaser_wrapper']}):
             a = div.find('a', href=True)
                 
@@ -148,15 +152,17 @@ class Stratfor(BasicNewsRecipe):
         return articles
 
     def parse_index(self):
-        feeds = { 'Geopolitical Weekly':{'http://www.stratfor.com/geopolitical-weekly'}, 'Security Weekly':{'http://www.stratfor.com/security-weekly'},
-            'Analysis':{'http://www.stratfor.com/analysis?page=1', 'http://www.stratfor.com/analysis'}, 
-            'Geopolitical Diary':{'http://www.stratfor.com/geopolitical-diary'},
-            'Other Voices':{'http://www.stratfor.com/other-voices'},
-            'Graphic of the day': {'http://www.stratfor.com/graphic-of-the-day'}, 
-	    'Video' : {'http://www.stratfor.com/video'},
-            'Situation reports':{'http://www.stratfor.com/situation-report?page=4', 'http://www.stratfor.com/situation-report?page=3', 'http://www.stratfor.com/situation-report?page=2','http://www.stratfor.com/situation-report?page=1', 'http://www.stratfor.com/situation-report/'}
+        feeds = {
+           'Geopolitical Weekly':{'http://www.stratfor.com/geopolitical-weekly'}, 'Security Weekly':{'http://www.stratfor.com/security-weekly'},
+           'Analysis':{'http://www.stratfor.com/analysis?page=1', 'http://www.stratfor.com/analysis'},
+           'Geopolitical Diary':{'http://www.stratfor.com/geopolitical-diary'},
+           'Other Voices':{'http://www.stratfor.com/other-voices'},
+           'Graphic of the day': {'http://www.stratfor.com/graphic-of-the-day'},
+	       'Video' : {'http://www.stratfor.com/video'},
+           'Situation reports':{'http://www.stratfor.com/situation-report?page=4', 'http://www.stratfor.com/situation-report?page=3', 'http://www.stratfor.com/situation-report?page=2','http://www.stratfor.com/situation-report?page=1', 'http://www.stratfor.com/situation-report/'},
+           'Blog':{'http://www.stratfor.com/blog'}
         }
-        weights = { 'Geopolitical Weekly':1, 'Security Weekly':2, 'Analysis':4, 'Geopolitical Diary':3, 'Other Voices':5, 'Graphic of the day':6, 'Video':7, 'Situation reports':8}
+        weights = { 'Geopolitical Weekly':1, 'Security Weekly':2, 'Analysis':4, 'Geopolitical Diary':3, 'Other Voices':5, 'Blog':6, 'Graphic of the day':7, 'Video':8, 'Situation reports':9}
         articles = {}
         categories = feeds.keys()
         for key,urls in feeds.iteritems():
