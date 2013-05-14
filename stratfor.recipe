@@ -49,7 +49,8 @@ class Stratfor(BasicNewsRecipe):
     oldest_article         = 1
     delay                  = 1
     reverse_article_order   = True
-    format                 = '%b %d, %Y | %H%M %Z'
+    format1                 = '%b %d, %Y | %H:%M'
+    format2                 = '%B %d, %Y | %H:%M'
     time_limit             = 1*24*60*60
 
     #timefmt  = '%B %d, %Y %H%M %Z'
@@ -66,16 +67,16 @@ class Stratfor(BasicNewsRecipe):
                         .byline{color:blue;font-family:Arial,Helvetica,sans-serif; font-size:xx-small}
                         h6{color:#333333; font-family:Georgia,"Century Schoolbook","Times New Roman",Times,serif; font-style:italic; }'''
 
-    remove_tags_before = dict(id=['main-area'])
+    remove_tags_before = dict(id=['region-content'])
     remove_tags = [
-                    dict(id=["text-resize-bar", ]),
+                    dict(id=["text-resize-bar", "feedback"]),
                     {'class':["facebook_like", "stratfor_feedback", "toplink-wrapper", "share_this_container", "relatedlinks", "print_btn", "freereports_side", "view-frontpage-views" ]},
                     dict(rel='shortcut icon'),
-                    dict(id=["site-header","main-menu", "skip-link", "top_picks", "site_menu", "mobile_menu", "right-side-bar", "top-picks"]),
-                    dict(attrs={'class':['unlocked', 'main_current_date', 'social_print', 'text_resize', 'article_divider', 'node_header_name']})
+                    dict(id=["site-header","main-menu", "skip-link", "top_picks", "site_menu", "mobile_menu", "right-side-bar", "top-picks", "region-right-sidebar"]),
+                    dict(attrs={'class':['unlocked', 'main_current_date', 'social_print', 'text_resize', 'article_divider', 'node_header_name', 'field-content common-inline', 'content-type']})
                     ]
     #remove_tags_after = [{'class':"content"},]
-    remove_tags_after = dict(id=["main-area"])
+    remove_tags_after = dict(id=["region-content"])
     def __init__(self, options, log, progress_reporter):
         """ Constructor. """
         BasicNewsRecipe.__init__(self, options, log, progress_reporter)
@@ -85,10 +86,7 @@ class Stratfor(BasicNewsRecipe):
         br = BasicNewsRecipe.get_browser(self)
         response = br.open('http://www.stratfor.com/')
         cookies = mechanize.CookieJar()
-        #cookies.set_cookie(mechanize.Cookie(None, 'YPF8827340282Jdskjhfiw_928937459182JAX666', '2.124.237.150', None, False, '.stratfor.com', True, True, '/', True, False, None, True, '', '', None))
         cookies.set_cookie(mechanize.Cookie(None, 'no_freelistpopup', '1', None, False, '.stratfor.com', True, True, '/', True, False, None, True, '', '', None))
-        #br = mechanize.build_opener(mechanize.HTTPCookieProcessor(cookies))
-        #response = br.open('http://www.stratfor.com/')
         #print response
         if self.username is not None and self.password is not None:
             res = br.open('http://www.stratfor.com/user')
@@ -112,55 +110,92 @@ class Stratfor(BasicNewsRecipe):
                 raise ValueError('Failed to log in to stratfor.com, check your '
                         'username and password')
     	return br
+    
+    def get_pubdate(self, div):
+        date_div = div.find('span', attrs={'class':['field-content post-date']})
+        if not date_div:
+            date_div = div.find('span', attrs={'class':['views-field views-field-created post-date']})
+        if date_div:
+            pubdate = self.tag_to_string(date_div, use_alt=False).strip()
+        #Lazy
+        pubdate = pubdate.replace(" Free", "").replace(" GMT", "")
+        pubdate = pubdate.replace("-", "|")
+        pubdate = pubdate.replace("Monday, ", "")
+        pubdate = pubdate.replace("Tuesday, ", "")
+        pubdate = pubdate.replace("Wednesday, ", "")
+        pubdate = pubdate.replace("Thursday, ", "")
+        pubdate = pubdate.replace("Friday, ", "")
+        pubdate = pubdate.replace("Saturday, ", "")
+        pubdate = pubdate.replace("Sunday, ", "")
+        return pubdate
+
+    def check_age(self, pubdate):
+        try:
+            x = time.strptime(pubdate, self.format1)
+        except ValueError:
+            x = time.strptime(pubdate, self.format2)
+                
+        dt = datetime(*x[:6])
+        diff = datetime.now() - dt
+        total_seconds = diff.days*24*3600 + diff.seconds
+        return total_seconds <= self.time_limit
 
     def parse_articles(self, soup):
         articles = []
         #remove recent posts from blog
         for recent in  soup.findAll(True, attrs={'id':['block-views-blog-recent-posts']}):
             recent.extract()
-
-        for div in soup.findAll(True, attrs={'class':['teaser_wrapper']}):
+        for sidebar in soup.findAll(True, attrs={'id':['region-right-sidebar']}):
+            sidebar.extract()
+        
+        for div in soup.findAll(True, attrs={'class':re.compile("^row-content.*$")}):
             a = div.find('a', href=True)
-                
             if not a:
                 continue
             url = re.sub(r'\?.*', '', a['href']).strip()
             if url.startswith('/'): url = 'http://www.stratfor.com'+url
             title = self.tag_to_string(a)
 
-            img = div.find('img')
-            if img:
-                img_url = img['src'].strip()
-                if img_url.startswith('/'): img_url = 'http://www.stratfor.com'+img_url
-
-            date_div = div.find('div', attrs={'class':['updated_teaser_date']})
-            if date_div:
-                pubdate = self.tag_to_string(date_div, use_alt=False).strip()
-            pubdate = pubdate.replace(" Free", "")
-            print "pub date %s" %(pubdate)
+            pubdate = self.get_pubdate(div)
+                
+            #print "pub date %s %s" %(pubdate, url)
             desc_div = div.find('p')
-            #print "p %s" %(desc_div)
             if desc_div:
                 description = self.tag_to_string(desc_div, use_alt=False).replace("[more]", "")
-            x = time.strptime(pubdate, self.format)
-            dt = datetime(*x[:6])
-            diff = datetime.now() - dt
-            total_seconds = diff.days*24*3600 + diff.seconds
-            if total_seconds <= self.time_limit:
+            else:
+                description = "null"
+           
+            if self.check_age(pubdate):
                 d = dict( title=title, url=url, description=description, date=pubdate, content ='')
                 articles.append( d )
         return articles
+            
+    def parse_media_article(self, soup):
+        articles = []
+        for box in soup.findAll(True, attrs={'class':"box-media"}):
+            pubdate = self.get_pubdate(box)
+            posttitle = box.find(True, attrs={'class':['field-content post-title']})
+            a = posttitle.find('a', href=True)
+            url = re.sub(r'\?.*', '', a['href']).strip()
+            if url.startswith('/'): url = 'http://www.stratfor.com'+url
+            title = self.tag_to_string(a)
+            if self.check_age(pubdate):
+                d = dict( title=title, url=url, description='', date=pubdate, content ='')
+                articles.append( d )
+        return articles
+            
+
 
     def parse_index(self):
         feeds = {
-           'Geopolitical Weekly':{'http://www.stratfor.com/geopolitical-weekly'}, 'Security Weekly':{'http://www.stratfor.com/security-weekly'},
-           'Analysis':{'http://www.stratfor.com/analysis?page=1', 'http://www.stratfor.com/analysis'},
-           'Geopolitical Diary':{'http://www.stratfor.com/geopolitical-diary'},
-           'Other Voices':{'http://www.stratfor.com/other-voices'},
-           'Graphic of the day': {'http://www.stratfor.com/graphic-of-the-day'},
-	       'Video' : {'http://www.stratfor.com/video'},
-           'Situation reports':{'http://www.stratfor.com/situation-report?page=4', 'http://www.stratfor.com/situation-report?page=3', 'http://www.stratfor.com/situation-report?page=2','http://www.stratfor.com/situation-report?page=1', 'http://www.stratfor.com/situation-report/'},
-           'Blog':{'http://www.stratfor.com/blog'}
+            'Geopolitical Weekly':{'http://www.stratfor.com/geopolitical-weekly'}, 'Security Weekly':{'http://www.stratfor.com/security-weekly'},
+            'Analysis':{'http://www.stratfor.com/analysis?page=1', 'http://www.stratfor.com/analysis'},
+            'Geopolitical Diary':{'http://www.stratfor.com/geopolitical-diary'},
+            'Other Voices':{'http://www.stratfor.com/other-voices'},
+            'Graphic of the day': {'http://www.stratfor.com/media-center/graphic-of-the-day'},
+            'Video' : {'http://www.stratfor.com/media-center/video'},
+            'Situation reports':{'http://www.stratfor.com/situation-report?page=4', 'http://www.stratfor.com/situation-report?page=3', 'http://www.stratfor.com/situation-report?page=2','http://www.stratfor.com/situation-report?page=1', 'http://www.stratfor.com/situation-report/'},
+            'Blog':{'http://www.stratfor.com/blog'}
         }
         weights = { 'Geopolitical Weekly':1, 'Security Weekly':2, 'Analysis':4, 'Geopolitical Diary':3, 'Other Voices':5, 'Blog':6, 'Graphic of the day':7, 'Video':8, 'Situation reports':9}
         articles = {}
@@ -170,8 +205,10 @@ class Stratfor(BasicNewsRecipe):
                 print "Downloading '%s' from %s" %(key, url)
                 soup = self.index_to_soup(url)
                 #print "soup %s" %(soup)
-                article = self.parse_articles(soup)
-                #print "\t%s" %(len(article))
+                if "media-center" in url:
+                    article = self.parse_media_article(soup)
+                else:
+                    article = self.parse_articles(soup)
                 if article:
                     if not articles or key not in articles:
                         articles[key] = article
