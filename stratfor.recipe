@@ -165,8 +165,6 @@ class Stratfor(BasicNewsRecipe):
             desc_div = div.find('p')
             if desc_div:
                 description = self.tag_to_string(desc_div, use_alt=False).replace("[more]", "")
-            else:
-                description = "null"
            
             if self.check_age(pubdate):
                 d = dict( title=title, url=url, description=description, date=pubdate, content ='')
